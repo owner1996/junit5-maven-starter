@@ -3,10 +3,11 @@ package com.dmdev.junit.service;
 import com.dmdev.junit.model.User;
 import org.junit.jupiter.api.*;
 
+import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class UserServiceTest {
@@ -30,32 +31,48 @@ public class UserServiceTest {
     void usersEmptyIfNoUserAdded() {
         System.out.println("Test 1: " + this);
         var users = userService.getAll();
-        assertTrue(users.isEmpty(), "User list should be empty");
+        assertThat(users).isEmpty();
+//        assertTrue(users.isEmpty(), "User list should be empty");
     }
 
     @Test
     void userSizeIfUserAdded() {
         System.out.println("Test 2: " + this);
-        userService.add(ALEX);
-        userService.add(PETR);
+        userService.add(ALEX, PETR);
 
         var users = userService.getAll();
-        assertEquals(2, users.size());
+
+        assertThat(users).hasSize(2);
+//        assertEquals(2, users.size());
     }
 
     @Test
     void loginSuccessIfUserExists() {
         userService.add(ALEX);
         Optional<User> maybeUser = userService.login(ALEX.getUsername(), ALEX.getPassword());
-        assertTrue(maybeUser.isPresent());
-        maybeUser.ifPresent(user -> assertEquals(ALEX, user));
+        assertThat(maybeUser).isPresent();
+//        assertTrue(maybeUser.isPresent());
+        maybeUser.ifPresent(user -> assertThat(user).isEqualTo(ALEX));
     }
 
     @Test
-    void loginFailIfPasswordIsNotCorrect(){
+    void usersConvertedToMapById() {
+        userService.add(ALEX, PETR);
+
+        Map<Integer, User> users = userService.getAllConvertedById();
+
+        assertAll(
+                () -> assertThat(users).containsKeys(ALEX.getId(), PETR.getId()),
+                () -> assertThat(users).containsValues(ALEX, PETR)
+        );
+    }
+
+    @Test
+    void loginFailIfPasswordIsNotCorrect() {
         userService.add(ALEX);
-        Optional<User> maybeUser = userService.login(ALEX.getUsername(),"12345");
-        assertTrue(maybeUser.isEmpty());
+        Optional<User> maybeUser = userService.login(ALEX.getUsername(), "12345");
+        assertThat(maybeUser).isEmpty();
+//        assertTrue(maybeUser.isEmpty());
     }
 
     @Test
@@ -63,6 +80,16 @@ public class UserServiceTest {
         userService.add(ALEX);
         Optional<User> maybeUser = userService.login("Bob", ALEX.getPassword());
         assertTrue(maybeUser.isEmpty());
+    }
+
+    @Test
+    void throwExceptionIfUsernameOrPasswordIsNull() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class, () -> userService.login(null, "qwerty123"),
+                        "login should throw exception on null username"),
+                () -> assertThrows(IllegalArgumentException.class, () -> userService.login(ALEX.getUsername(), null),
+                        "login should throw exception on null password")
+        );
     }
 
     @AfterEach
